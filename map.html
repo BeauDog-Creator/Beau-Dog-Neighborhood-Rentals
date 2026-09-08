@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f6b49">
+<title>Map • Beau Dog Neighbor Rentals</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--g:#2f6b49;--bg:#f4f6f1;--line:#dfe5de;--muted:#6f7c73}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:var(--bg);color:#1d2821}.top{background:linear-gradient(135deg,#244e38,#3f7a58);color:#fff;padding:16px}.brand{display:flex;align-items:center;gap:10px;max-width:760px;margin:auto}.paw{width:42px;height:42px;border-radius:13px;background:#f1e4c8;color:#244e38;display:grid;place-items:center;font-size:22px}.brand h1{font-size:19px;margin:0}.brand p{font-size:11px;margin:3px 0 0;opacity:.85}.shell{max-width:760px;margin:auto;padding:12px}.toolbar{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:0 6px 18px rgba(31,45,37,.08);margin-bottom:10px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.btn{border:0;border-radius:12px;padding:10px 12px;font-weight:800;font-size:13px}.primary{background:var(--g);color:#fff}.secondary{background:#edf2ed;color:var(--g)}select{border:1px solid #ccd6cf;border-radius:12px;padding:10px;background:#fff;font:inherit}.privacy{margin-top:10px;background:#f2f7f3;border-left:4px solid var(--g);border-radius:10px;padding:9px 10px;font-size:11px;color:#4e5e53}.mapwrap{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#dde5dd;box-shadow:0 8px 24px rgba(31,45,37,.1)}#map{height:58vh;min-height:430px}.status{position:absolute;z-index:600;left:10px;top:10px;background:#fff;padding:8px 10px;border-radius:10px;font-size:11px;box-shadow:0 3px 10px rgba(0,0,0,.15)}.list{margin-top:10px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}.item b{display:block;font-size:14px}.muted{font-size:11px;color:var(--muted);margin-top:3px}.price{font-weight:850;color:var(--g);white-space:nowrap}.pin{font-size:21px}.leaflet-popup-content{margin:12px}.popup-title{font-weight:850;font-size:14px}.popup-meta{font-size:11px;color:#68766d;margin-top:3px}.popup-price{font-weight:850;color:var(--g);margin-top:7px}.popup-note{font-size:10px;color:#68766d;margin-top:7px}.me-dot{width:16px;height:16px;background:#3277d6;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px rgba(50,119,214,.25)}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand"><div class="paw">🐾</div><div><h1>Nearby Equipment Map</h1><p>Beau Dog Neighbor Rentals</p></div></div></header>
+<div class="shell">
+  <div class="toolbar">
+    <div class="row">
+      <button class="btn secondary" onclick="location.href='index.html'">‹ Back to Browse</button>
+      <button class="btn primary" id="locate">📍 Use My Location</button>
+      <label style="font-size:11px;font-weight:800">Radius</label>
+      <select id="radius"><option value="5">5 mi</option><option value="10">10 mi</option><option value="25" selected>25 mi</option><option value="50">50 mi</option></select>
+    </div>
+    <div class="privacy"><b>Privacy protected:</b> Equipment pins show an approximate nearby area only. Exact pickup addresses stay hidden until a rental is confirmed.</div>
+  </div>
+  <div class="mapwrap"><div id="status" class="status">Map ready • tap “Use My Location”</div><div id="map"></div></div>
+  <div class="list"><b>Equipment shown on map</b><div id="items"></div></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const demo=[
+{id:'1',e:'🪵',n:'27-Ton Log Splitter',c:'Lawn & Garden',p:65,d:4.2,a:'Available today',ang:42},
+{id:'2',e:'💦',n:'3200 PSI Pressure Washer',c:'Tools',p:38,d:2.8,a:'Available this weekend',ang:128},
+{id:'3',e:'🚚',n:'6×12 Utility Trailer',c:'Trailers',p:45,d:6.7,a:'Available tomorrow',ang:210},
+{id:'4',e:'🌱',n:'Rear-Tine Rototiller',c:'Lawn & Garden',p:52,d:8.1,a:'Available Friday',ang:300},
+{id:'5',e:'⚡',n:'6500W Portable Generator',c:'Tools',p:70,d:11.4,a:'Available today',ang:350}
+];
+const get=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
+const my=get('listings',[]).map((x,i)=>({id:'m'+i,e:x.emoji||'🧰',n:x.name,c:x.category||'Tools',p:+x.price||0,d:0.6+(i*.35),a:x.availability||'Available',ang:75+(i*53)%360,mine:true}));
+const all=[...demo,...my];
+let center=[43.6591,-70.2568], radius=25, circle, markers=[];
+const map=L.map('map',{zoomControl:true}).setView(center,10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+function approxPoint(lat,lng,miles,angle){const km=miles*1.60934;const rad=angle*Math.PI/180;const dLat=(km/111)*Math.cos(rad);const dLng=(km/(111*Math.cos(lat*Math.PI/180)))*Math.sin(rad);return[lat+dLat,lng+dLng]}
+function iconFor(e){return L.divIcon({className:'',html:'<div style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#fff;border:3px solid #2f6b49;box-shadow:0 3px 9px rgba(0,0,0,.22);font-size:19px">'+e+'</div>',iconSize:[38,38],iconAnchor:[19,19],popupAnchor:[0,-18]})}
+function render(){markers.forEach(m=>map.removeLayer(m));markers=[];if(circle)map.removeLayer(circle);circle=L.circle(center,{radius:radius*1609.34,color:'#2f6b49',weight:2,fillOpacity:.06}).addTo(map);const visible=all.filter(x=>x.d<=radius);visible.forEach(x=>{const pt=approxPoint(center[0],center[1],x.d,x.ang);const m=L.marker(pt,{icon:iconFor(x.e)}).addTo(map).bindPopup('<div class="popup-title">'+x.e+' '+x.n+'</div><div class="popup-meta">'+x.c+' • about '+x.d.toFixed(1)+' mi away</div><div class="popup-price">$'+x.p+'/day</div><div class="popup-meta">'+x.a+'</div><div class="popup-note">Approximate area — exact address is private.</div>');markers.push(m)});document.getElementById('items').innerHTML=visible.map(x=>'<div class="item"><div><b><span class="pin">'+x.e+'</span> '+x.n+'</b><div class="muted">'+x.c+' • about '+x.d.toFixed(1)+' miles • '+x.a+'</div></div><div class="price">$'+x.p+'/day</div></div>').join('')||'<div class="muted" style="padding:12px 0">No equipment inside this radius.</div>';map.fitBounds(circle.getBounds(),{padding:[15,15]})}
+function useLocation(){const st=document.getElementById('status');if(!navigator.geolocation){st.textContent='Location is not available on this device.';return}st.textContent='Finding your location…';navigator.geolocation.getCurrentPosition(pos=>{center=[pos.coords.latitude,pos.coords.longitude];st.textContent='Showing equipment near you';render()},()=>{st.textContent='Location permission not granted — showing the demo area.';render()},{enableHighAccuracy:true,timeout:10000,maximumAge:60000})}
+document.getElementById('locate').onclick=useLocation;document.getElementById('radius').onchange=e=>{radius=+e.target.value;render()};const p=get('profile',{});if(p.radius&&[5,10,25,50].includes(+p.radius)){radius=+p.radius;document.getElementById('radius').value=String(radius)}render();setTimeout(()=>map.invalidateSize(),200);
+</script>
+</body>
+</html>
